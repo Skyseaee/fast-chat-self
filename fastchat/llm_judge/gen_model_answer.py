@@ -17,6 +17,7 @@ from fastchat.llm_judge.common import load_questions, temperature_config
 from fastchat.model import load_model, get_conversation_template
 from fastchat.utils import str_to_torch_dtype
 
+from client_api import APIClient
 
 def run_eval(
     model_path,
@@ -70,6 +71,53 @@ def run_eval(
         ray.get(ans_handles)
 
 
+def get_answer_by_client(server_addr: str, questions, num_choices, max_token, model_id):
+    client = APIClient(server_addr)
+    for question in tqdm(questions):
+        temperature = 0.7
+        choices = []
+
+        for i in range(num_choices):
+            turns = []
+            conversation_history = []
+            for j, qs in enumerate(question['turns']):
+                # prompt = f"{qs} "
+                conversation_history.append({"role": "user", "content": qs})
+                try:
+                    response = client.v1_chat_completions(
+                                prompt=conversation_history,
+                                stream=False,
+                                temperature=temperature,
+                                max_tokens=max_token + 2048,
+                            )
+                    output = ''
+                    for out in response: 
+                        output = output + out["choices"][0]["message"]["content"] if out else ''
+                    output = output.replace("Assistant:", "").strip()
+                    conversation_history.append({"role": "assistant", "content": output})
+                except Exception as e:
+                    print("ERROR question ID: ", question["question_id"])
+                    import traceback
+                    traceback.print_exc()
+                    output = "ERROR"
+
+                turns.append(output)
+
+            choices.append({"index": i, "turns": turns})
+
+        # Save the results to the answer file
+        os.makedirs(os.path.dirname(answer_file), exist_ok=True)
+        with open(os.path.expanduser(answer_file), "a") as fout:
+            ans_json = {
+                "question_id": question["question_id"],
+                "answer_id": shortuuid.uuid(),
+                "model_id": model_id,
+                "choices": choices,
+                "tstamp": time.time(),
+            }
+            fout.write(json.dumps(ans_json) + "\n")
+                    
+
 @torch.inference_mode()
 def get_model_answers(
     model_path,
@@ -82,7 +130,12 @@ def get_model_answers(
     max_gpu_memory,
     dtype,
     revision,
+    mode = True,
 ):
+    if mode:
+        get_answer_by_client(model_path, questions, num_choices, max_new_token, model_id)
+        return
+
     model, tokenizer = load_model(
         model_path,
         revision=revision,

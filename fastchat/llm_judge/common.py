@@ -404,22 +404,42 @@ def play_a_match_pair(match: MatchPair, output_file: str):
     return result
 
 
-def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
+def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None, local=False):
+    if local:
+        import client_api
+        client = client_api.APIClient(openai.api_base)
+        messages = conv.to_openai_api_messages()
+        output = API_ERROR_OUTPUT
+        for out in client.v1_chat_completions(
+                    prompt=messages,
+                    stream=False,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    ):
+            if output:
+                output = out["choices"][0]["message"]["content"]
+        return output
+
     if api_dict is not None:
         openai.api_base = api_dict["api_base"]
         openai.api_key = api_dict["api_key"]
     output = API_ERROR_OUTPUT
+    from openai import OpenAI
+    client = OpenAI(api_key="sk-abfd16b24d0a4d94a2fece741ead5cea", base_url="https://api.deepseek.com")
+    openai.api_key = "sk-abfd16b24d0a4d94a2fece741ead5cea"
+    openai.api_base = "https://api.deepseek.com/v1"
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
-            response = openai.ChatCompletion.create(
-                model=model,
+            response = client.chat.completions.create(
+                model='deepseek-chat',
                 messages=messages,
-                n=1,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                stream=False,
             )
-            output = response["choices"][0]["message"]["content"]
+            # print(response)
+            output = response.choices[0].message.content
             break
         except openai.error.OpenAIError as e:
             print(type(e), e)
