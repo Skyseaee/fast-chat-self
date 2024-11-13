@@ -268,7 +268,7 @@ def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=F
 
     if model in OPENAI_MODEL_LIST:
         conv.set_system_message(system_prompt)
-        judgment = chat_completion_openai(model, conv, temperature=0, max_tokens=2048)
+        judgment = chat_completion_openai(model, conv, temperature=0, max_tokens=2048, local_api=False)
     elif model in ANTHROPIC_MODEL_LIST:
         if system_prompt != "You are a helpful assistant.":
             user_prompt = "[Instruction]\n" + system_prompt + "\n\n" + user_prompt
@@ -404,8 +404,8 @@ def play_a_match_pair(match: MatchPair, output_file: str):
     return result
 
 
-def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None, local=False):
-    if local:
+def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None, local_api=False):
+    if local_api:
         import client_api
         client = client_api.APIClient(openai.api_base)
         messages = conv.to_openai_api_messages()
@@ -425,9 +425,8 @@ def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None, 
         openai.api_key = api_dict["api_key"]
     output = API_ERROR_OUTPUT
     from openai import OpenAI
-    client = OpenAI(api_key="sk-abfd16b24d0a4d94a2fece741ead5cea", base_url="https://api.deepseek.com")
-    openai.api_key = "sk-abfd16b24d0a4d94a2fece741ead5cea"
-    openai.api_base = "https://api.deepseek.com/v1"
+    client = OpenAI(api_key=openai.api_key, base_url=openai.api_base)
+
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()

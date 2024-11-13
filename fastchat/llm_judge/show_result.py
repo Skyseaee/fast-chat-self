@@ -92,6 +92,50 @@ def display_result_pairwise(args):
     print(df.sort_values(by="win_rate_adjusted", ascending=False))
 
 
+def display_result_pairwise_single(args):
+    if args.input_file is None:
+        input_file = (
+            f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
+        )
+    else:
+        input_file = args.input_file
+
+    print(f"Input file: {input_file}")
+    df_all = pd.read_json(input_file, lines=True)
+    df_all = df_all[(df_all["g1_winner"] != "error") & (df_all["g2_winner"] != "error")]
+
+    model_res = []
+
+    # traverse df row by row
+    for index, row in df_all.iterrows():
+        if args.model_list is not None and row["model_1"] not in args.model_list or row['model_2'] not in args.model_list:
+            continue
+        if row["g1_winner"] == "tie" or row["g1_winner"] != row["g2_winner"]:
+            model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 0, "loss": 0, "tie": 1})
+            model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 0, "loss": 0, "tie": 1})
+        else:
+            if row["g1_winner"] == "model_1":
+                model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 1, "loss": 0, "tie": 0})
+                model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 0, "loss": 1, "tie": 0})
+            else:
+                model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 0, "loss": 1, "tie": 0})
+                model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 1, "loss": 0, "tie": 0})
+
+    df = pd.DataFrame(model_res)
+    df = df.groupby(["model_comparison"]).sum()
+
+    # add win rate
+    df["win_rate"] = df["win"] / (df["win"] + df["loss"] + df["tie"])
+    df["loss_rate"] = df["loss"] / (df["win"] + df["loss"] + df["tie"])
+    # each tie counts as 0.5 win + 0.5 loss
+    df["win_rate_adjusted"] = (df["win"] + 0.5 * df["tie"]) / (
+        df["win"] + df["loss"] + df["tie"]
+    )
+    # print(df.sort_values(by="win_rate", ascending=False))
+    # print(df.sort_values(by="loss_rate", ascending=True))
+    print(df.sort_values(by="win_rate_adjusted", ascending=False))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bench-name", type=str, default="mt_bench")
@@ -109,11 +153,12 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="single",
-        choices=["pairwise-baseline", "pairwise-all", "single"],
+        choices=["pairwise-baseline", "pairwise-all", "single", "pairwise-single"],
         help=(
             "Evaluation mode. "
             "`pairwise-baseline` runs pairwise comparision against a baseline. "
             "`pairwise-all` runs pairwise comparision between all pairs. "
+            "`pairwise-single` runs a single pairwise comparison for all possible pairs. "
             "`single` runs single answer grading."
         ),
     )
@@ -121,6 +166,8 @@ if __name__ == "__main__":
 
     if args.mode == "single":
         display_result_func = display_result_single
+    elif args.mode == 'pairwise-single':
+        display_result_func = display_result_pairwise_single
     else:
         if args.mode == "pairwise-all":
             args.baseline_model = None

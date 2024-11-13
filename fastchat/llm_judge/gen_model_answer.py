@@ -88,7 +88,7 @@ def get_answer_by_client(server_addr: str, questions, num_choices, max_token, mo
                                 prompt=conversation_history,
                                 stream=False,
                                 temperature=temperature,
-                                max_tokens=max_token + 2048,
+                                max_tokens=max_token,
                             )
                     output = ''
                     for out in response: 
