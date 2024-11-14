@@ -115,13 +115,13 @@ if __name__ == "__main__":
     )
     parser.add_argument("--openai-api-base", type=str, default=None)
     parser.add_argument(
-        "--local-api", action=True, help="Use the local API instead of the default OpenAI or DeepSeek API. "
+        "--local-api", action='store_true', help="Use the local API instead of the default OpenAI or DeepSeek API. "
     )
     args = parser.parse_args()
 
     if args.openai_api_base is not None:
         openai.api_base = args.openai_api_base
-        openai.api_key = os.environ.get('API_KEY')
+        openai.api_key = os.environ.get('OPEN_API_KEY')
 
     question_file = f"data/{args.bench_name}/question.jsonl"
     questions = load_questions(question_file, args.question_begin, args.question_end)

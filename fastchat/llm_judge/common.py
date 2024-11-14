@@ -268,6 +268,8 @@ def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=F
 
     if model in OPENAI_MODEL_LIST:
         conv.set_system_message(system_prompt)
+        openai.api_key = os.environ.get('OPEN_API_KEY')
+        openai.api_base = os.environ.get('OPEN_API_BASE')
         judgment = chat_completion_openai(model, conv, temperature=0, max_tokens=2048, local_api=False)
     elif model in ANTHROPIC_MODEL_LIST:
         if system_prompt != "You are a helpful assistant.":
@@ -434,7 +436,7 @@ def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None, 
                 model='deepseek-chat',
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens + 2048,
                 stream=False,
             )
             # print(response)
