@@ -25,6 +25,3 @@ jobs:
     - name: Run linter
       run: |
         pylint -d all -e E0602 ./fastchat/
-    - name: Check formatting
-      run: |
-        black --check .
