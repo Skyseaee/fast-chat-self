@@ -3,6 +3,7 @@
 Usage:
 python3 gen_api_answer.py --model gpt-3.5-turbo
 """
+
 import argparse
 import json
 import os
@@ -25,7 +26,12 @@ from fastchat.model.model_adapter import get_conversation_template, ANTHROPIC_MO
 
 
 def get_answer(
-    question: dict, model: str, num_choices: int, max_tokens: int, answer_file: str, local_api: bool
+    question: dict,
+    model: str,
+    num_choices: int,
+    max_tokens: int,
+    answer_file: str,
+    local_api: bool,
 ):
     assert (
         args.force_temperature is not None and "required_temperature" in question.keys()
@@ -56,7 +62,9 @@ def get_answer(
                     chat_state, model, conv, temperature, max_tokens
                 )
             else:
-                output = chat_completion_openai(model, conv, temperature, max_tokens, local_api=local_api)
+                output = chat_completion_openai(
+                    model, conv, temperature, max_tokens, local_api=local_api
+                )
 
             conv.update_last_message(output)
             turns.append(output)
@@ -115,13 +123,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("--openai-api-base", type=str, default=None)
     parser.add_argument(
-        "--local-api", action='store_true', help="Use the local API instead of the default OpenAI or DeepSeek API. "
+        "--local-api",
+        action="store_true",
+        help="Use the local API instead of the default OpenAI or DeepSeek API. ",
     )
     args = parser.parse_args()
 
     if args.openai_api_base is not None:
         openai.api_base = args.openai_api_base
-        openai.api_key = os.environ.get('OPEN_API_KEY')
+        openai.api_key = os.environ.get("OPEN_API_KEY")
 
     question_file = f"data/{args.bench_name}/question.jsonl"
     questions = load_questions(question_file, args.question_begin, args.question_end)

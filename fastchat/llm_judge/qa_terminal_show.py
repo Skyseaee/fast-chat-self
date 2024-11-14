@@ -50,14 +50,24 @@ def display_pairwise_answer(question_id, model_selector1, model_selector2):
 
     # Generate explanations
     judgment_dict = resolve_pairwise_judgment_dict(
-        q, model_judgments_normal_pairwise, model_judgments_math_pairwise, multi_turn=False
+        q,
+        model_judgments_normal_pairwise,
+        model_judgments_math_pairwise,
+        multi_turn=False,
     )
-    explanation = get_pairwise_judge_explanation((qid, model_selector1, model_selector2), judgment_dict)
+    explanation = get_pairwise_judge_explanation(
+        (qid, model_selector1, model_selector2), judgment_dict
+    )
 
     judgment_dict_turn2 = resolve_pairwise_judgment_dict(
-        q, model_judgments_normal_pairwise, model_judgments_math_pairwise, multi_turn=True
+        q,
+        model_judgments_normal_pairwise,
+        model_judgments_math_pairwise,
+        multi_turn=True,
     )
-    explanation_turn2 = get_pairwise_judge_explanation((qid, model_selector1, model_selector2), judgment_dict_turn2)
+    explanation_turn2 = get_pairwise_judge_explanation(
+        (qid, model_selector1, model_selector2), judgment_dict_turn2
+    )
 
     print("First Turn Judgment:\n", explanation)
     print("Second Turn Judgment:\n", explanation_turn2)
@@ -76,7 +86,9 @@ def display_single_answer(question_id, model_selector):
     judgment_dict_turn2 = resolve_single_judgment_dict(
         q, model_judgments_normal_single, model_judgments_math_single, multi_turn=True
     )
-    explanation_turn2 = get_single_judge_explanation((qid, model_selector), judgment_dict_turn2)
+    explanation_turn2 = get_single_judge_explanation(
+        (qid, model_selector), judgment_dict_turn2
+    )
 
     print("First Turn Judgment:\n", explanation)
     print("Second Turn Judgment:\n", explanation_turn2)
@@ -94,16 +106,24 @@ def main(args):
     # Load questions, answers, and judgments
     question_file = f"data/{args.bench_name}/question.jsonl"
     answer_dir = f"data/{args.bench_name}/model_answer"
-    pairwise_model_judgment_file = f"data/{args.bench_name}/model_judgment/gpt-4_pair.jsonl"
-    single_model_judgment_file = f"data/{args.bench_name}/model_judgment/gpt-4_single.jsonl"
+    pairwise_model_judgment_file = (
+        f"data/{args.bench_name}/model_judgment/gpt-4_pair.jsonl"
+    )
+    single_model_judgment_file = (
+        f"data/{args.bench_name}/model_judgment/gpt-4_single.jsonl"
+    )
 
     global questions, model_answers, model_judgments_normal_single, model_judgments_math_single
     global model_judgments_normal_pairwise, model_judgments_math_pairwise
 
     questions = load_questions(question_file, None, None)
     model_answers = load_model_answers(answer_dir)
-    model_judgments_normal_single = model_judgments_math_single = load_single_model_judgments(single_model_judgment_file)
-    model_judgments_normal_pairwise = model_judgments_math_pairwise = load_pairwise_model_judgments(pairwise_model_judgment_file)
+    model_judgments_normal_single = model_judgments_math_single = (
+        load_single_model_judgments(single_model_judgment_file)
+    )
+    model_judgments_normal_pairwise = model_judgments_math_pairwise = (
+        load_pairwise_model_judgments(pairwise_model_judgment_file)
+    )
 
     # Build question-selector mappings
     build_question_selector_map()
@@ -111,22 +131,34 @@ def main(args):
     if args.mode == "pairwise":
         category = input("Enter the category of questions: ")
         question_id, choices = display_question(category)
-        model_selector1 = input(f"Choose Model A from options {list(model_answers.keys())}: ")
-        model_selector2 = input(f"Choose Model B from options {list(model_answers.keys())}: ")
+        model_selector1 = input(
+            f"Choose Model A from options {list(model_answers.keys())}: "
+        )
+        model_selector2 = input(
+            f"Choose Model B from options {list(model_answers.keys())}: "
+        )
         display_pairwise_answer(question_id, model_selector1, model_selector2)
 
     elif args.mode == "single":
         category = input("Enter the category of questions: ")
         question_id, choices = display_question(category)
-        model_selector = input(f"Choose Model from options {list(model_answers.keys())}: ")
+        model_selector = input(
+            f"Choose Model from options {list(model_answers.keys())}: "
+        )
         display_single_answer(question_id, model_selector)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bench-name", type=str, default="mt_bench", help="Name of the benchmark")
-    parser.add_argument("--mode", choices=["single", "pairwise"], required=True, help="Select 'single' or 'pairwise' mode for model evaluation.")
+    parser.add_argument(
+        "--bench-name", type=str, default="mt_bench", help="Name of the benchmark"
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["single", "pairwise"],
+        required=True,
+        help="Select 'single' or 'pairwise' mode for model evaluation.",
+    )
     args = parser.parse_args()
 
     main(args)
-

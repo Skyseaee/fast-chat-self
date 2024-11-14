@@ -2,6 +2,7 @@
 Usage:
 python3 show_result.py --mode [single|pairwise-baseline|pairwise-all]
 """
+
 import argparse
 import pandas as pd
 
@@ -108,18 +109,82 @@ def display_result_pairwise_single(args):
 
     # traverse df row by row
     for index, row in df_all.iterrows():
-        if args.model_list is not None and row["model_1"] not in args.model_list or row['model_2'] not in args.model_list:
+        if (
+            args.model_list is not None
+            and row["model_1"] not in args.model_list
+            or row["model_2"] not in args.model_list
+        ):
             continue
         if row["g1_winner"] == "tie" or row["g1_winner"] != row["g2_winner"]:
-            model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 0, "loss": 0, "tie": 1})
-            model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 0, "loss": 0, "tie": 1})
+            model_res.append(
+                {
+                    "model_comparison": row["model_1"]
+                    + " ( vs "
+                    + row["model_2"]
+                    + " ) ",
+                    "win": 0,
+                    "loss": 0,
+                    "tie": 1,
+                }
+            )
+            model_res.append(
+                {
+                    "model_comparison": row["model_2"]
+                    + " ( vs "
+                    + row["model_1"]
+                    + " ) ",
+                    "win": 0,
+                    "loss": 0,
+                    "tie": 1,
+                }
+            )
         else:
             if row["g1_winner"] == "model_1":
-                model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 1, "loss": 0, "tie": 0})
-                model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 0, "loss": 1, "tie": 0})
+                model_res.append(
+                    {
+                        "model_comparison": row["model_1"]
+                        + " ( vs "
+                        + row["model_2"]
+                        + " ) ",
+                        "win": 1,
+                        "loss": 0,
+                        "tie": 0,
+                    }
+                )
+                model_res.append(
+                    {
+                        "model_comparison": row["model_2"]
+                        + " ( vs "
+                        + row["model_1"]
+                        + " ) ",
+                        "win": 0,
+                        "loss": 1,
+                        "tie": 0,
+                    }
+                )
             else:
-                model_res.append({"model_comparison": row["model_1"] + ' ( vs ' + row["model_2"] + ' ) ', "win": 0, "loss": 1, "tie": 0})
-                model_res.append({"model_comparison": row["model_2"] + ' ( vs ' + row["model_1"] + ' ) ', "win": 1, "loss": 0, "tie": 0})
+                model_res.append(
+                    {
+                        "model_comparison": row["model_1"]
+                        + " ( vs "
+                        + row["model_2"]
+                        + " ) ",
+                        "win": 0,
+                        "loss": 1,
+                        "tie": 0,
+                    }
+                )
+                model_res.append(
+                    {
+                        "model_comparison": row["model_2"]
+                        + " ( vs "
+                        + row["model_1"]
+                        + " ) ",
+                        "win": 1,
+                        "loss": 0,
+                        "tie": 0,
+                    }
+                )
 
     df = pd.DataFrame(model_res)
     df = df.groupby(["model_comparison"]).sum()
@@ -166,7 +231,7 @@ if __name__ == "__main__":
 
     if args.mode == "single":
         display_result_func = display_result_single
-    elif args.mode == 'pairwise-single':
+    elif args.mode == "pairwise-single":
         display_result_func = display_result_pairwise_single
     else:
         if args.mode == "pairwise-all":
