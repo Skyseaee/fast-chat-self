@@ -7,7 +7,7 @@ with open('Chatbotqa3_qwen25_br_tw_500.csv', mode='r', encoding='utf-8') as csv_
     for row in csv_reader:
         row['serial_number'] = serial_number
         row['category'] = "roleplay"
-        row['truns'] = [row['question']]
+        row['turns'] = [row['question']]
         del row['question']
         # 写入到 JSONL 文件
         jsonl_file.write(json.dumps(row, ensure_ascii=False) + '\n')
