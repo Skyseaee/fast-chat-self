@@ -430,6 +430,8 @@ def chat_completion_openai(
     if api_dict is not None:
         openai.api_base = api_dict["api_base"]
         openai.api_key = api_dict["api_key"]
+    else:
+        openai.api_base = os.environ.get("OPENAI_API_BASE")
     output = API_ERROR_OUTPUT
     from openai import OpenAI
 
