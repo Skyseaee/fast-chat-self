@@ -5,7 +5,7 @@ with open('Chatbotqa3_qwen25_br_tw_500.csv', mode='r', encoding='utf-8') as csv_
     csv_reader = csv.DictReader(csv_file)
     serial_number = 161
     for row in csv_reader:
-        row['serial_number'] = serial_number
+        row['question_id'] = serial_number
         row['category'] = "roleplay"
         row['turns'] = [row['question']]
         del row['question']
