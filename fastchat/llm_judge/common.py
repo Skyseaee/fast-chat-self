@@ -261,17 +261,21 @@ def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=F
         )
 
     winner = "error"
-
-    conv = get_conversation_template(model)
+    
+    if '@' in model:
+        model_name = model.split('@')[1]
+    else:
+        model_name = model
+    conv = get_conversation_template(model_name)
     conv.append_message(conv.roles[0], user_prompt)
     conv.append_message(conv.roles[1], None)
-
+    
     if model in OPENAI_MODEL_LIST:
         conv.set_system_message(system_prompt)
         openai.api_key = os.environ.get("OPEN_API_KEY")
         openai.api_base = os.environ.get("OPEN_API_BASE")
         judgment = chat_completion_openai(
-            model, conv, temperature=0, max_tokens=2048, local_api=False
+            model, conv, temperature=0, max_tokens=4096, local_api=False
         )
     elif model in ANTHROPIC_MODEL_LIST:
         if system_prompt != "You are a helpful assistant.":
@@ -280,9 +284,29 @@ def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=F
         judgment = chat_completion_anthropic(
             model, conv, temperature=0, max_tokens=1024
         )
+    elif model.startswith("local-api"):
+        import client_api
+        
+        api_addr = model.split('@')[-1]
+        client = client_api.APIClient(api_addr)
+        # messages = conv.to_openai_api_messages()
+        output = API_ERROR_OUTPUT
+        conv.set_system_message(system_prompt)
+        messages = conv.to_openai_api_messages()
+        # user_prompt = "[Instruction]\n" + system_prompt + "\n\n" + user_prompt
+        for out in client.v1_chat_completions(
+            prompt=messages,
+            stream=False,
+            temperature=0,
+            max_tokens=16384,
+        ):
+            if output:
+                # print('output, ', out)
+                output = out["choices"][0]["message"]["content"]
+        judgment = output
     else:
-        raise ValueError(f"Invalid judge model name: {model}")
-
+        raise ValueError(f"Invalid judge model name: {model}, start with {model.startswith('local-api')}")
+    # print(len(judgement))
     if judge.prompt_template["output_format"] == "[[A]]":
         if "[[A]]" in judgment:
             winner = "A"
@@ -314,7 +338,7 @@ def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=F
     return winner, user_prompt, judgment
 
 
-def play_a_match_pair(match: MatchPair, output_file: str):
+def play_a_match_pair(match: MatchPair, output_file: str, uuid: str = ""):
     question, model_1, model_2, answer_1, answer_2, judge, ref_answer, multi_turn = (
         match.question,
         match.model_1,
@@ -354,6 +378,7 @@ def play_a_match_pair(match: MatchPair, output_file: str):
             "g2_judgment": g2_judgment,
             "turn": turn,
             "tstamp": time.time(),
+            "uuid": uuid,
         }
 
         print(
@@ -416,6 +441,7 @@ def chat_completion_openai(
 
         client = client_api.APIClient(openai.api_base)
         messages = conv.to_openai_api_messages()
+        # print(messages)
         output = API_ERROR_OUTPUT
         for out in client.v1_chat_completions(
             prompt=messages,
@@ -425,6 +451,7 @@ def chat_completion_openai(
         ):
             if output:
                 output = out["choices"][0]["message"]["content"]
+        # print(output)
         return output
 
     if api_dict is not None:
@@ -444,14 +471,14 @@ def chat_completion_openai(
                 model="deepseek-chat",
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens + 2048,
+                max_tokens=max_tokens,
                 stream=False,
             )
             # print(response)
             output = response.choices[0].message.content
             break
-        except openai.error.OpenAIError as e:
-            print(type(e), e)
+        except Exception as e:
+            print(type(e), e, max_tokens)
             time.sleep(API_RETRY_SLEEP)
 
     return output
