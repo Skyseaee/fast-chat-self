@@ -21,7 +21,7 @@ from fastchat.llm_judge.common import (
         check_data,
         NEED_REF_CATS,
 )
-from fastchat.llm_judge.gen_judgement import make_judge_single, make_judge_pairwise, make_match_single, make_match_all_pairs, make_match
+from fastchat.llm_judge.gen_judgment import make_judge_single, make_judge_pairwise, make_match_single, make_match_all_pairs, make_match
 from fastchat.llm_judge.show_result import (
     display_result_single,
     display_result_pairwise,
