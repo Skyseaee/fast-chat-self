@@ -76,18 +76,26 @@ def run_eval(
 def get_answer_by_client(server_addr: str, questions, num_choices, max_token, model_id):
     client = APIClient(server_addr)
     for question in tqdm(questions):
-        temperature = 0.7
+        if question["category"] in temperature_config:
+            temperature = temperature_config[question["category"]]
+        else:
+            temperature = 0.7
         choices = []
 
         for i in range(num_choices):
+            conv = get_conversation_template(model_id)
             turns = []
             conversation_history = []
-            for j, qs in enumerate(question["turns"]):
+            for j in range(len(question["turns"])):
                 # prompt = f"{qs} "
-                conversation_history.append({"role": "user", "content": qs})
+                qs = question["turns"][j]
+                conv.append_message(conv.roles[0], qs)
+                conv.append_message(conv.roles[1], None)
+                prompt = conv.get_prompt()
+                # conversation_history.append({"role": "user", "content": qs})
                 try:
                     response = client.v1_chat_completions(
-                        prompt=conversation_history,
+                        prompt=prompt,
                         stream=False,
                         temperature=temperature,
                         max_tokens=max_token,
@@ -99,10 +107,7 @@ def get_answer_by_client(server_addr: str, questions, num_choices, max_token, mo
                             if out
                             else ""
                         )
-                    output = output.replace("Assistant:", "").strip()
-                    conversation_history.append(
-                        {"role": "assistant", "content": output}
-                    )
+                    output = output.replace("Assistant:", "", 1).strip()
                 except Exception as e:
                     print("ERROR question ID: ", question["question_id"])
                     import traceback
@@ -110,6 +115,7 @@ def get_answer_by_client(server_addr: str, questions, num_choices, max_token, mo
                     traceback.print_exc()
                     output = "ERROR"
 
+                conv.update_last_message(output)
                 turns.append(output)
 
             choices.append({"index": i, "turns": turns})
