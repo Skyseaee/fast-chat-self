@@ -3,16 +3,11 @@
 import argparse
 from ast import List
 import json
-import os
-import random
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 import concurrent
-import openai
 import shortuuid
 import numpy as np
-from sympy import Li
 from tqdm import tqdm
 
 from fastchat.llm_judge.gen_api_answer import get_answer, reorg_answer_file
@@ -22,7 +17,6 @@ from fastchat.llm_judge.common import (
         load_judge_prompts, 
         get_model_list, 
         play_a_match_single, 
-        run_judge_pair, 
         play_a_match_pair, 
         check_data,
         NEED_REF_CATS,
