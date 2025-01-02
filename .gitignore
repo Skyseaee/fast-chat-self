@@ -9,6 +9,7 @@ dist
 *.log
 *.log.*
 *.json
+*.jsonl
 !playground/deepspeed_config_s2.json
 !playground/deepspeed_config_s3.json
 
@@ -34,3 +35,6 @@ build
 serve_images
 val2014
 vqa_examples
+
+# trained model
+output_vicuna/

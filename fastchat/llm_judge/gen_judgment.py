@@ -181,6 +181,12 @@ if __name__ == "__main__":
         default="data/judge_prompts.jsonl",
         help="The file of judge prompts.",
     )
+    parser.add_argument(
+        "--openai-api",
+        type=str,
+        default="Null",
+        help="Api address for local api.",
+    )
     parser.add_argument("--judge-model", type=str, default="gpt-4")
     parser.add_argument("--baseline-model", type=str, default="gpt-3.5-turbo")
     parser.add_argument(
@@ -223,6 +229,7 @@ if __name__ == "__main__":
 
     # Load judge
     judge_prompts = load_judge_prompts(args.judge_file)
+    # print(judge_prompts)
 
     if args.first_n:
         questions = questions[: args.first_n]
@@ -243,9 +250,15 @@ if __name__ == "__main__":
     else:
         judges = make_judge_pairwise(args.judge_model, judge_prompts)
         play_a_match_func = play_a_match_pair
-        output_file = (
-            f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
-        )
+        if '//' not in args.judge_model:
+            output_file = (
+                f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
+            )
+        else:
+            judge_model = args.judge_model.split('@')[1]
+            output_file = (
+                f"data/{args.bench_name}/model_judgment/{judge_model}_pair.jsonl"
+            )
         if args.mode == "pairwise-all":
             make_match_func = make_match_all_pairs
             baseline_model = None

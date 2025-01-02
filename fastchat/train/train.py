@@ -86,7 +86,17 @@ def trainer_save_model_safe(trainer: transformers.Trainer):
     with FSDP.state_dict_type(
         trainer.model, StateDictType.FULL_STATE_DICT, save_policy
     ):
-        trainer.save_model()
+        state_dict = trainer.model.state_dict()
+
+        for key, value in state_dict.items():
+            if value.dtype == torch.float32:  # 仅转换 FP32 权重
+                state_dict[key] = value.half()
+
+        output_dir = trainer.args.output_dir
+        save_path = f"{output_dir}/pytorch_model_fp16.bin"
+        torch.save(state_dict, save_path)
+        print(f"Model saved in FP16 format to {save_path}")
+        # trainer.save_model()
 
 
 def preprocess(
@@ -300,6 +310,7 @@ def train():
     trainer = Trainer(
         model=model, tokenizer=tokenizer, args=training_args, **data_module
     )
+    model.generation_config.do_sample = True
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:
@@ -307,11 +318,22 @@ def train():
 
     # Save model
     model.config.use_cache = True
+    if hasattr(model, "generation_config"):
+        model.generation_config.do_sample = True
+        # model.generation_config.temperature = 0.9  # 移除 temperature
+        # model.generation_config.top_p = None        # 移除 top_p
+        # model.generation_config.do_sample = False
+    
     trainer.save_state()
     if trainer.is_deepspeed_enabled:
         trainer.save_model()
     else:
         trainer_save_model_safe(trainer)
+
+def save_fp16_model(model, output_dir):
+    model_fp16 = model.half()  # 转换为 FP16
+    torch.save(model_fp16.state_dict(), f"{output_dir}/pytorch_model.bin")
+    print(f"Model weights saved in FP16 format to {output_dir}")
 
 
 if __name__ == "__main__":

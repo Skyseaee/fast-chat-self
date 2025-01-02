@@ -2167,6 +2167,19 @@ register_conv_template(
     )
 )
 
+# Compass-chat template
+# reference: [ compass template link ]
+register_conv_template(
+    Conversation(
+        name="compass-llm",
+        system_message="",
+        roles=("Human", "Ai"),
+        sep_style=SeparatorStyle.DEFAULT,
+        sep="</s>",
+        stop_str="['</s>']",
+    )
+)
+
 # Yuan2.0 chat template
 # source: https://huggingface.co/IEITYuan/Yuan2-2B-Janus-hf/blob/main/tokenizer_config.json#L6
 register_conv_template(

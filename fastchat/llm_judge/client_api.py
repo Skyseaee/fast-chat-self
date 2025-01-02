@@ -28,9 +28,9 @@ class APIClient:
         temperature: Optional[float] = 0,
         max_tokens: Optional[int] = 2048,
         stream: Optional[bool] = False,
-        top_p: Optional[float] = 1.0,
-        top_k: Optional[int] = 1,
-        repetition_penalty: Optional[float] = 1.0,
+        top_p: Optional[float] = 0.8,
+        top_k: Optional[int] = 10,
+        repetition_penalty: Optional[float] = 1.06,
         **kwargs,
     ):
         pload = {
@@ -65,3 +65,63 @@ class APIClient:
                     decoded = chunk.decode("utf-8")
                     output = json.loads(decoded)
                     yield output
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Send a request to API with custom text input.")
+    parser.add_argument(
+        "--text-input",
+        type=str,
+        required=True,
+        help="The text content for the prompt. Example: 'Draft a professional email seeking your supervisor's feedback on the Quarterly Financial Report.'"
+    )
+    
+
+    server_addr = 'http://0.0.0.0:8080'
+    api_client = APIClient(server_addr)
+    # image_url = 'https://cf.shopee.co.id/file/id-11134207-7r98u-lv1eywfgw2uh74'
+    # folder = '/home/jian.yin/code/llm/downloads/downloads/vlmdata/textvqa/llava_textvqa_val_v051_ocr.jsonl'
+    image_url: str = '/workspace/code/downloads/downloads/vlmdata/textvqa/train_images/003a8ae2ef43b901.jpg'
+    # base64_image = encode_image(image_url)
+    # image_url = f"data:image/jpeg;base64,{base64_image}"
+    # print(image_url[0])
+    args = parser.parse_args()
+
+    # 通过命令行参数获取 text_input
+    text_input = args.text_input
+    print(text_input)
+    prompts = [{
+        'role': 'user',
+        'content': text_input,
+    }]
+
+    stream = False
+    top_p = 1.0
+    top_k = 1
+    temperature = 0
+    if stream:
+        for result in api_client.v1_chat_completions(
+                prompt=prompts,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k
+        ):
+            text = result['choices'][0].get('delta').get('content')
+            if text:
+                print(text, end='', flush=True)
+        print("\n")
+    else:
+        begin_time = time.time()
+        for output in api_client.v1_chat_completions(
+                prompt=prompts,
+                stream=stream,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k
+        ):
+            print(output)
+        lantency = time.time() - begin_time
+        print("lantency:", lantency)
+

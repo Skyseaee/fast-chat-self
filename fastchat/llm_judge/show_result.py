@@ -115,6 +115,10 @@ def display_result_pairwise_single(args):
             or row["model_2"] not in args.model_list
         ):
             continue
+        if hasattr(args, 'uuid') and len(args.uuid) > 0:
+            uuid = args.uuid
+            if row["uuid"] != uuid:
+                continue
         if row["g1_winner"] == "tie" or row["g1_winner"] != row["g2_winner"]:
             model_res.append(
                 {
