@@ -434,14 +434,18 @@ def play_a_match_pair(match: MatchPair, output_file: str, uuid: str = ""):
 
 
 def chat_completion_openai(
-    model, conv, temperature, max_tokens, api_dict=None, local_api=False
+    model, conv, temperature, max_tokens, api_dict=None, local_api=False, open_api="",
 ):
     if local_api:
         import client_api
 
-        client = client_api.APIClient(openai.api_base)
+        if len(open_api) > 0:
+            client = client_api.APIClient(open_api)
+        else:
+            client = client_api.APIClient(openai.api_base)
+        
         messages = conv.to_openai_api_messages()
-        # print(messages)
+        
         output = API_ERROR_OUTPUT
         for out in client.v1_chat_completions(
             prompt=messages,

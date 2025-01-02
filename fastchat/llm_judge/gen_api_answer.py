@@ -32,6 +32,7 @@ def get_answer(
     max_tokens: int,
     answer_file: str,
     local_api: bool,
+    open_api: str = "",
 ):
     assert (
         args.force_temperature is not None and "required_temperature" in question.keys()
@@ -63,7 +64,7 @@ def get_answer(
                 )
             else:
                 output = chat_completion_openai(
-                    model, conv, temperature, max_tokens, local_api=local_api
+                    model, conv, temperature, max_tokens, local_api=local_api, open_api=open_api
                 )
 
             conv.update_last_message(output)

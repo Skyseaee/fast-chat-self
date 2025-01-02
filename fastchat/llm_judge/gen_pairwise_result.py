@@ -1,18 +1,21 @@
 # generate the pairwise-all result for all model, support deepseek api ( default ), support local API
 
 import argparse
+from ast import List
 import json
 import os
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import concurrent
+import openai
 import shortuuid
-import torch
 import numpy as np
+from sympy import Li
 from tqdm import tqdm
 
-from fastchat.llm_judge.gen_model_answer import run_eval, reorg_answer_file
+from fastchat.llm_judge.gen_api_answer import get_answer, reorg_answer_file
 from fastchat.llm_judge.common import ( 
         load_questions, 
         load_model_answers, 
@@ -31,22 +34,44 @@ from fastchat.llm_judge.show_result import (
     display_result_pairwise_single
 )
 
+def gen_answer_file_name(bench_name: str, model_id: List[str]) -> List[str]:
+    filenames = []
+    for model in model_id:
+        answer_file = f"data/{bench_name}/model_answer/{model}.jsonl"
+        filenames.append(answer_file)
+    
+    return filenames
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model-path",
-        type=str,
-        required=True,
-        help="The path to the weights. This can be a local folder or a Hugging Face repo ID.",
-    )
-    parser.add_argument(
-        "--model-id", type=str, required=True, help="A custom name for the model."
-    )
     parser.add_argument(
         "--bench-name",
         type=str,
         default="mt_bench",
         help="The name of the benchmark question set.",
+    )
+    parser.add_argument("--answer-file", type=str, help="The output answer file.")
+    parser.add_argument(
+        "--model-list",
+        type=str,
+        nargs="+",
+        default=None,
+        help="A list of models to be evaluated",
+    )
+    parser.add_argument(
+        "--num-choices",
+        type=int,
+        default=1,
+        help="How many completion choices to generate.",
+    )
+    parser.add_argument(
+        "--force-temperature", type=float, help="Forcibly set a sampling temperature."
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=1024,
+        help="The maximum number of new generated tokens.",
     )
     parser.add_argument(
         "--question-begin",
@@ -56,39 +81,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--question-end", type=int, help="A debug option. The end index of questions."
     )
-    parser.add_argument("--answer-file", type=str, help="The output answer file.")
     parser.add_argument(
-        "--max-new-token",
-        type=int,
-        default=1024,
-        help="The maximum number of new generated tokens.",
+        "--parallel", type=int, default=1, help="The number of concurrent API calls."
     )
     parser.add_argument(
-        "--num-choices",
-        type=int,
-        default=1,
-        help="How many completion choices to generate.",
-    )
-    parser.add_argument(
-        "--num-gpus-per-model",
-        type=int,
-        default=1,
-        help="The number of GPUs per model.",
-    )
-    parser.add_argument(
-        "--num-gpus-total", type=int, default=1, help="The total number of GPUs."
-    )
-    parser.add_argument(
-        "--max-gpu-memory",
+        "--openai-api-base", 
         type=str,
-        help="Maxmum GPU memory used for model weights per GPU.",
+        nargs='+', 
+        default=None
     )
     parser.add_argument(
-        "--dtype",
-        type=str,
-        choices=["float32", "float16", "bfloat16"],
-        help="Override the default dtype. If not set, it will use float16 on GPU and float32 on CPU.",
-        default=None,
+        "--local-api",
+        action="store_true",
+        help="Use the local API instead of the default OpenAI or DeepSeek API. ",
     )
 
     # args for gen judgements
@@ -114,13 +119,6 @@ if __name__ == "__main__":
         ),
     )
 
-    parser.add_argument(
-        "--model-list",
-        type=str,
-        nargs="+",
-        default=None,
-        help="A list of models to be evaluated",
-    )
     parser.add_argument(
         "--parallel", type=int, default=1, help="The number of concurrent API calls."
     )
@@ -160,36 +158,43 @@ if __name__ == "__main__":
 
     question_file = f"data/{args.bench_name}/question.jsonl"
     if args.answer_file:
-        answer_file = args.answer_file
+        answer_files = args.answer_file
     else:
-        answer_file = f"data/{args.bench_name}/model_answer/{args.model_id}.jsonl"
+        answer_files = gen_answer_file_name(args.bench_name, args.model_list)
 
-    print(f"Output to {answer_file}")
+    print(f"Output to {answer_files}")
 
-    run_eval(
-        model_path=args.model_path,
-        model_id=args.model_id,
-        question_file=question_file,
-        question_begin=args.question_begin,
-        question_end=args.question_end,
-        answer_file=answer_file,
-        max_new_token=args.max_new_token,
-        num_choices=args.num_choices,
-        num_gpus_per_model=args.num_gpus_per_model,
-        num_gpus_total=args.num_gpus_total,
-        max_gpu_memory=args.max_gpu_memory,
-        dtype=str_to_torch_dtype(args.dtype),
-        revision=args.revision,
-    )
-
-    reorg_answer_file(answer_file)
+    # if args.openai_api_base is not None:
+    #     openai.api_base = args.openai_api_base
+    #     openai.api_key = os.environ.get("OPEN_API_KEY")
 
     question_file = f"data/{args.bench_name}/question.jsonl"
+    questions = load_questions(question_file, args.question_begin, args.question_end)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as executor:
+        futures = []
+        for question in questions:
+            for (answer_file, open_api) in zip(answer_files, args.openai_api_base):
+                future = executor.submit(
+                    get_answer,
+                    question,
+                    args.model,
+                    args.num_choices,
+                    args.max_tokens,
+                    answer_file,
+                    args.local_api,
+                    open_api,
+                )
+                futures.append(future)
+
+        for future in tqdm.tqdm(
+            concurrent.futures.as_completed(futures), total=len(futures)
+        ):
+            future.result()
+    reorg_answer_file(answer_files)
+    
     answer_dir = f"data/{args.bench_name}/model_answer"
     ref_answer_dir = f"data/{args.bench_name}/reference_answer"
-
-    # Load questions
-    questions = load_questions(question_file, None, None)
 
     # Load answers
     model_answers = load_model_answers(answer_dir)
@@ -217,9 +222,17 @@ if __name__ == "__main__":
     else:
         judges = make_judge_pairwise(args.judge_model, judge_prompts)
         play_a_match_func = play_a_match_pair
-        output_file = (
-            f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
-        )
+
+        if '//' not in args.judge_model:
+            output_file = (
+                f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
+            )
+        else:
+            judge_model = args.judge_model.split('@')[1]
+            output_file = (
+                f"data/{args.bench_name}/model_judgment/{judge_model}_pair.jsonl"
+            )
+        
         if args.mode == "pairwise-all":
             make_match_func = make_match_all_pairs
             baseline_model = None
@@ -302,7 +315,7 @@ if __name__ == "__main__":
 
     # show result
     print('Generate final results.')
-    f args.result_mode == "single":
+    if args.result_mode == "single":
         display_result_func = display_result_single
     elif args.result_mode == "pairwise-single":
         display_result_func = display_result_pairwise_single

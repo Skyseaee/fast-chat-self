@@ -270,16 +270,20 @@ def get_model_answers(
 
 def reorg_answer_file(answer_file):
     """Sort by question id and de-duplication"""
-    answers = {}
-    with open(answer_file, "r") as fin:
-        for l in fin:
-            qid = json.loads(l)["question_id"]
-            answers[qid] = l
+    if isinstance(answer_file, str):
+        answer_file = [answer_file]
+        
+    for answer_f in answer_file:
+        answers = {}
+        with open(answer_f, "r") as fin:
+            for l in fin:
+                qid = json.loads(l)["question_id"]
+                answers[qid] = l
 
-    qids = sorted(list(answers.keys()))
-    with open(answer_file, "w") as fout:
-        for qid in qids:
-            fout.write(answers[qid])
+        qids = sorted(list(answers.keys()))
+        with open(answer_f, "w") as fout:
+            for qid in qids:
+                fout.write(answers[qid])
 
 
 if __name__ == "__main__":
