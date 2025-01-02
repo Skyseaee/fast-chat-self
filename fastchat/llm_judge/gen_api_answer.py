@@ -34,10 +34,14 @@ def get_answer(
     local_api: bool,
     open_api: str = "",
 ):
+    try:
+        args
+    except NameError:
+        args = None
     assert (
-        args.force_temperature is not None and "required_temperature" in question.keys()
+        args is not None and args.force_temperature is not None and "required_temperature" in question.keys()
     ) == False
-    if args.force_temperature is not None:
+    if args is not None and args.force_temperature is not None:
         temperature = args.force_temperature
     elif "required_temperature" in question.keys():
         temperature = question["required_temperature"]
