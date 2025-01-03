@@ -313,14 +313,3 @@ if __name__ == "__main__":
 
     print(f"Mode: {args.mode}")
     display_result_func(args)
-
-
-"""
-Mode: pairwise-all
-Traceback (most recent call last):
-  File "/workspace/fast-chat/fastchat/llm_judge/gen_pairwise_result.py", line 321, in <module>
-    display_result_func(args)
-  File "/workspace/fast-chat/fastchat/llm_judge/show_result.py", line 97, in display_result_pairwise_single
-    if args.input_file is None:
-AttributeError: 'Namespace' object has no attribute 'input_file'
-"""
