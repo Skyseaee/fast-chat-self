@@ -1,7 +1,7 @@
 # generate the pairwise-all result for all model, support deepseek api ( default ), support local API
 
 import argparse
-from ast import List
+from typing import List
 import json
 from concurrent.futures import ThreadPoolExecutor
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode",
         type=str,
-        default="single",
+        default="pairwise-all",
         choices=["pairwise-baseline", "pairwise-all", "single"],
         help=(
             "Evaluation mode. "
@@ -113,9 +113,6 @@ if __name__ == "__main__":
         ),
     )
 
-    parser.add_argument(
-        "--parallel", type=int, default=1, help="The number of concurrent API calls."
-    )
     parser.add_argument(
         "--first-n", type=int, help="A debug option. Only run the first `n` judgments."
     )
@@ -129,6 +126,7 @@ if __name__ == "__main__":
     )
 
     # args for show result
+    parser.add_argument("--input-file", type=str)
     parser.add_argument(
         "--result-mode",
         type=str,
@@ -144,11 +142,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    if args.num_gpus_total // args.num_gpus_per_model > 1:
-        import ray
-
-        ray.init()
 
     question_file = f"data/{args.bench_name}/question.jsonl"
     if args.answer_file:
@@ -169,10 +162,11 @@ if __name__ == "__main__":
         futures = []
         for question in questions:
             for (answer_file, open_api) in zip(answer_files, args.openai_api_base):
+                model = answer_file.split('/')[-1].split('.')[0]
                 future = executor.submit(
                     get_answer,
                     question,
-                    args.model,
+                    model,
                     args.num_choices,
                     args.max_tokens,
                     answer_file,
@@ -181,7 +175,7 @@ if __name__ == "__main__":
                 )
                 futures.append(future)
 
-        for future in tqdm.tqdm(
+        for future in tqdm(
             concurrent.futures.as_completed(futures), total=len(futures)
         ):
             future.result()
@@ -291,11 +285,10 @@ if __name__ == "__main__":
     # Play matches
     if args.parallel == 1:
         for match in tqdm(matches):
-            play_a_match_func(match, output_file=output_file, pair_uuid="")
+            play_a_match_func(match, output_file=output_file, uuid="")
     else:
-
         def play_a_match_wrapper(match):
-            play_a_match_func(match, output_file=output_file, pair_uuid="")
+            play_a_match_func(match, output_file=output_file, uuid="")
 
         np.random.seed(0)
         np.random.shuffle(matches)
@@ -321,3 +314,13 @@ if __name__ == "__main__":
     print(f"Mode: {args.mode}")
     display_result_func(args)
 
+
+"""
+Mode: pairwise-all
+Traceback (most recent call last):
+  File "/workspace/fast-chat/fastchat/llm_judge/gen_pairwise_result.py", line 321, in <module>
+    display_result_func(args)
+  File "/workspace/fast-chat/fastchat/llm_judge/show_result.py", line 97, in display_result_pairwise_single
+    if args.input_file is None:
+AttributeError: 'Namespace' object has no attribute 'input_file'
+"""
