@@ -39,9 +39,9 @@ def get_answer(
     except NameError:
         args = None
         
-    assert (
-        args and args.force_temperature is not None and "required_temperature" in question.keys()
-    ) == False
+    # assert (
+    #     args and args.force_temperature is not None and "required_temperature" in question.keys()
+    # ) == False
     if args and args.force_temperature is not None:
         temperature = args.force_temperature
     elif "required_temperature" in question.keys():

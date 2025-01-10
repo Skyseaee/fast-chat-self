@@ -1,7 +1,7 @@
 import csv
 import json
 
-with open('Chatbotqa3_qwen25_br_tw_500.csv', mode='r', encoding='utf-8') as csv_file, open('question.jsonl', mode='w', encoding='utf-8') as jsonl_file:
+with open('/opt/lmdeploy/lmdeploy/lite/utils/chatbot.csv', mode='r', encoding='utf-8') as csv_file, open('question.jsonl', mode='w', encoding='utf-8') as jsonl_file:
     csv_reader = csv.DictReader(csv_file)
     serial_number = 161
     for row in csv_reader:

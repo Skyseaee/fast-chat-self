@@ -285,10 +285,10 @@ if __name__ == "__main__":
     # Play matches
     if args.parallel == 1:
         for match in tqdm(matches):
-            play_a_match_func(match, output_file=output_file, uuid="")
+            play_a_match_func(match, output_file=output_file, uuid=args.uuid)
     else:
         def play_a_match_wrapper(match):
-            play_a_match_func(match, output_file=output_file, uuid="")
+            play_a_match_func(match, output_file=output_file, uuid=args.uuid)
 
         np.random.seed(0)
         np.random.shuffle(matches)
@@ -311,7 +311,7 @@ if __name__ == "__main__":
             args.baseline_model = None
         display_result_func = display_result_pairwise
 
-    print(f"Mode: {args.mode}")
+    print(f"Mode: {args.result_mode}")
     display_result_func(args)
 
 
