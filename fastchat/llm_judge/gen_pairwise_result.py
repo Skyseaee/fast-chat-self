@@ -30,6 +30,11 @@ from fastchat.llm_judge.show_result import (
 
 def gen_answer_file_name(bench_name: str, model_id: List[str]) -> List[str]:
     filenames = []
+    # Add default baseline model
+    if len(model_id) == 1:
+        model_id.append('gpt-3.5-turbo')
+        print(f"Add default baseline model: gpt-3.5-turbo")
+
     for model in model_id:
         answer_file = f"data/{bench_name}/model_answer/{model}.jsonl"
         filenames.append(answer_file)
@@ -157,12 +162,25 @@ if __name__ == "__main__":
 
     question_file = f"data/{args.bench_name}/question.jsonl"
     questions = load_questions(question_file, args.question_begin, args.question_end)
+    question_ids = set([q["question_id"] for q in questions])
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as executor:
         futures = []
-        for question in questions:
-            for (answer_file, open_api) in zip(answer_files, args.openai_api_base):
+        for (answer_file, open_api) in zip(answer_files, args.openai_api_base):
+            with open(answer_file, "r") as fout:
+                    lines = fout.readlines()
+                    indexes = set()
+                    for line in lines:
+                        data = json.loads(line)
+                        if data['question_id'] in question_ids:
+                            indexes.add(data['question_id'])
+                    if len(indexes) == len(questions):
+                        print(f"Skip {answer_file}, already finished.")
+                        continue
+
+            for question in questions:
                 model = answer_file.split('/')[-1].split('.')[0]
+                    
                 future = executor.submit(
                     get_answer,
                     question,
@@ -279,8 +297,7 @@ if __name__ == "__main__":
     # Show match stats and prompt enter to continue
     print("Stats:")
     print(json.dumps(match_stat, indent=4))
-
-    input("Press Enter to confirm...")
+    # input("Press Enter to confirm...")
 
     # Play matches
     if args.parallel == 1:
@@ -313,14 +330,3 @@ if __name__ == "__main__":
 
     print(f"Mode: {args.result_mode}")
     display_result_func(args)
-
-
-"""
-Mode: pairwise-all
-Traceback (most recent call last):
-  File "/workspace/fast-chat/fastchat/llm_judge/gen_pairwise_result.py", line 321, in <module>
-    display_result_func(args)
-  File "/workspace/fast-chat/fastchat/llm_judge/show_result.py", line 97, in display_result_pairwise_single
-    if args.input_file is None:
-AttributeError: 'Namespace' object has no attribute 'input_file'
-"""
