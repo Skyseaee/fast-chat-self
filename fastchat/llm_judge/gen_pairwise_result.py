@@ -1,6 +1,7 @@
 # generate the pairwise-all result for all model, support deepseek api ( default ), support local API
 
 import argparse
+import os
 from typing import List
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -167,16 +168,17 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as executor:
         futures = []
         for (answer_file, open_api) in zip(answer_files, args.openai_api_base):
-            with open(answer_file, "r") as fout:
-                    lines = fout.readlines()
-                    indexes = set()
-                    for line in lines:
-                        data = json.loads(line)
-                        if data['question_id'] in question_ids:
-                            indexes.add(data['question_id'])
-                    if len(indexes) == len(questions):
-                        print(f"Skip {answer_file}, already finished.")
-                        continue
+            if os.path.exists(answer_file):
+                with open(answer_file, "r") as fout:
+                        lines = fout.readlines()
+                        indexes = set()
+                        for line in lines:
+                            data = json.loads(line)
+                            if data['question_id'] in question_ids:
+                                indexes.add(data['question_id'])
+                        if len(indexes) == len(questions):
+                            print(f"Skip {answer_file}, already finished.")
+                            continue
 
             for question in questions:
                 model = answer_file.split('/')[-1].split('.')[0]
