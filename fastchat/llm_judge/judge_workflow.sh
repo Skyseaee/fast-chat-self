@@ -75,13 +75,13 @@ function open_model_server() {
                     --max-batch-size 512 \
                     --cache-max-entry-count 0.9 \
                     --session-len 8192
-            sleep 5m
         fi
     else
         echo "Invalid backend specified: $backend"
         exit 1
     fi
 
+    sleep 5m
     echo "Waiting for server to start..."
 }
 
